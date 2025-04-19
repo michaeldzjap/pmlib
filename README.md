@@ -1,4 +1,2 @@
-PMLib
-=====
-
-A physical modelling library for SuperCollider
+# pmlib
+A physical modelling library for building resonator networks

@@ -1,11 +1,14 @@
-# ignore .idea dir
-.idea
-# ignore SC test file
-*networkTest.scd
-# ignore all pyc files
-*.pyc
-# ignore all DS_Store files
-*.DS_Store
-# ignore all tmp json files
-modalData.json
-networkArgs.json
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv
