@@ -1,2 +1,2 @@
 # pmlib
-A physical modelling library for building resonator networks
+A physical modelling library for building interconnected resonator networks

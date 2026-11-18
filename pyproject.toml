@@ -1,15 +1,15 @@
 [project]
 name = "pmlib"
 version = "0.1.0"
-description = "A physical modelling library for building resonator networks"
+description = "A physical modelling library for building interconnected resonator networks"
 readme = "README.md"
 authors = [
     { name = "Michael Dzjaparidze" }
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "nump>=5.5.5.5",
-    "scipy>=1.15.2",
+    "numpy>=2.5.5",
+    "scipy>=1.18.1",
 ]
 
 [build-system]
@@ -18,12 +18,17 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3.5",
-    "pytest-cov>=6.1.1",
-    "ruff>=0.11.6",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.5",
+    "scipy-stubs>=1.18.1.1",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportUnknownMemberType = false

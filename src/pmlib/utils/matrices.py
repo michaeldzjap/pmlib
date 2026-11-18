@@ -1,10 +1,12 @@
 """Sparse difference matrix utilities."""
 
-from numpy import prod
-from scipy.sparse import diags, spmatrix
+from numpy import full, ones, prod, vstack
+from scipy.sparse import dia_matrix, spmatrix
+
+import numpy as np
 
 
-def second_difference_matrix(n: int = 2) -> spmatrix:
+def second_difference_matrix(n: int = 2) -> dia_matrix[np.floating]:
     """
     Generate the second order difference operator in matrix form.
 
@@ -26,10 +28,12 @@ def second_difference_matrix(n: int = 2) -> spmatrix:
     if n < 2:
         raise ValueError("n must be equal or greater than 2")
 
-    return diags((1, -2, 1), (-1, 0, 1), (n, n))
+    diagonals = vstack([ones(n), full(n, -2.0), ones(n)])
+
+    return dia_matrix((diagonals, (-1.0, 0.0, 1.0)), shape=(n, n))
 
 
-def fourth_difference_matrix(n: int = 3) -> spmatrix:
+def fourth_difference_matrix(n: int = 3) -> dia_matrix[np.floating]:
     """
     Generate the fourth order difference operator in matrix form.
 
@@ -51,10 +55,12 @@ def fourth_difference_matrix(n: int = 3) -> spmatrix:
     if n < 3:
         raise ValueError("n must be equal or greater than 3")
 
-    return diags((1, -4, 6, -4, 1), (-2, -1, 0, 1, 2), (n, n))
+    diagonals = vstack([ones(n), full(n, -4.0), full(n, 6.0), full(n, -4.0), ones(n)])
+
+    return dia_matrix((diagonals, (-2, -1, 0, 1, 2)), shape=(n, n))
 
 
-def laplacian_matrix(n: tuple[int, int] = (2, 2)) -> spmatrix:
+def laplacian_matrix(n: tuple[int, int] = (2, 2)) -> dia_matrix[np.floating]:
     """
     Generate the discrete laplacian operator in matrix form.
 
@@ -79,7 +85,17 @@ def laplacian_matrix(n: tuple[int, int] = (2, 2)) -> spmatrix:
 
     m = prod(n)
 
-    return diags((1, 1, -4, 1, 1), (-n[1], -1, 0, 1, n[1]), (m, m))
+    diagonals = np.vstack(
+        [
+            np.ones(m),
+            np.ones(m),
+            np.full(m, -4.0),
+            np.ones(m),
+            np.ones(m),
+        ]
+    )
+
+    return dia_matrix((diagonals, (-n[1], -1, 0, 1, n[1])), shape=(m, m))
 
 
 def biharmonic_matrix(n: tuple[int, int] = (4, 4)) -> spmatrix:
@@ -107,24 +123,44 @@ def biharmonic_matrix(n: tuple[int, int] = (4, 4)) -> spmatrix:
 
     m = prod(n)
 
-    return diags(
-        (1, 2, -8, 2, 1, -8, 20, -8, 1, 2, -8, 2, 1),
+    diagonals = np.vstack(
+        [
+            np.ones(m),
+            np.full(m, 2.0),
+            np.full(m, -8.0),
+            np.full(m, 2.0),
+            np.ones(m),
+            np.full(m, -8.0),
+            np.full(m, 20.0),
+            np.full(m, -8.0),
+            np.ones(m),
+            np.full(m, 2.0),
+            np.full(m, -8.0),
+            np.full(m, 2.0),
+            np.ones(m),
+        ]
+    )
+
+    return dia_matrix(
         (
-            2 * -n[1],
-            -n[1] - 1,
-            -n[1],
-            -n[1] + 1,
-            -2,
-            -1,
-            0,
-            1,
-            2,
-            n[1] - 1,
-            n[1],
-            n[1] + 1,
-            2 * n[1],
+            diagonals,
+            (
+                2 * -n[1],
+                -n[1] - 1,
+                -n[1],
+                -n[1] + 1,
+                -2,
+                -1,
+                0,
+                1,
+                2,
+                n[1] - 1,
+                n[1],
+                n[1] + 1,
+                2 * n[1],
+            ),
         ),
-        (m, m),
+        shape=(m, m),
     )
 
 

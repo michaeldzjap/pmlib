@@ -13,12 +13,15 @@ import matplotlib.animation as ani
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pmlib.resonators import BoundaryCondition, Endpoint, LinearResonator1D
+from collections.abc import Iterable
+from matplotlib.artist import Artist
+
+from pmlib.fdm.resonators import BoundaryCondition, Endpoint, LinearResonator1D
 
 
 # Global parameters
 SR = 44100  # sample rate (Hz)
-B = 0.0001  # inharmonicity parameter (>0)
+B = 0.00001  # inharmonicity parameter (>0)
 F0 = 100  # fundamental (Hz)
 CTR = 0.1  # center location
 WID = 0.05  # width of excitation
@@ -49,7 +52,7 @@ resonator = LinearResonator1D(
     GAMMA,
     kappa,
     sig,
-    {Endpoint.LEFT: BoundaryCondition.FREE, Endpoint.RIGHT: BoundaryCondition.CLAMPED},
+    {Endpoint.LEFT: BoundaryCondition.CLAMPED, Endpoint.RIGHT: BoundaryCondition.CLAMPED},
 )
 
 resonator.build()
@@ -68,13 +71,13 @@ u = np.zeros((resonator.n + 1, 1))
 
 fig, ax = plt.subplots()
 string = ax.plot(xax.flatten(), u.flatten())[0]
-ax.set_ylim([-0.5, 0.5])
+ax.set_ylim((-0.5, 0.5))
 ax.set_xlabel("location divided by length")
 ax.set_ylabel("displacement")
 ax.set_title("Linear Stiff String Simulation")
 
 
-def update(_: int):
+def update(_: int) -> Iterable[Artist]:
     """Main loop."""
     u[0 : resonator.n + 1] = resonator.b * u1 + resonator.c * u2
 
@@ -83,7 +86,7 @@ def update(_: int):
     u2[0 : resonator.n + 1] = u1[0 : resonator.n + 1]
     u1[0 : resonator.n + 1] = u[0 : resonator.n + 1]
 
-    return string
+    return (string,)
 
 
 animation = ani.FuncAnimation(fig=fig, func=update, frames=40, interval=30)

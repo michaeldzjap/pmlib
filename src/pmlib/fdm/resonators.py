@@ -5,9 +5,11 @@ from enum import Enum, auto
 from math import sqrt
 from typing import Self
 
-from scipy.sparse import csr_matrix, dok_matrix, identity, spmatrix
+from scipy.sparse import dia_matrix, dok_matrix, identity
 
-from .utils.matrices import fourth_difference_matrix, second_difference_matrix
+from ..utils.matrices import fourth_difference_matrix, second_difference_matrix
+
+import numpy as np
 
 
 class BoundaryCondition(Enum):
@@ -21,6 +23,15 @@ class BoundaryCondition(Enum):
 class Endpoint(Enum):
     """All possible endpoints."""
 
+    LEFT = auto()
+    RIGHT = auto()
+
+
+class Edge(Enum):
+    """All possible edges."""
+
+    TOP = auto()
+    BOTTOM = auto()
     LEFT = auto()
     RIGHT = auto()
 
@@ -41,8 +52,8 @@ class Resonator(ABC):
         self.gamma = gamma
         self.kappa = kappa
         self.loss = loss
-        self._b = csr_matrix((0, 0))
-        self._c = csr_matrix((0, 0))
+        self._b = dia_matrix((0, 0))
+        self._c = dia_matrix((0, 0))
 
     @property
     def gamma(self) -> float:
@@ -82,12 +93,12 @@ class Resonator(ABC):
         self._loss = value
 
     @property
-    def b(self) -> spmatrix:
+    def b(self) -> dia_matrix[np.floating]:
         """Get the update matrix acting on u^n."""
         return self._b
 
     @property
-    def c(self) -> spmatrix:
+    def c(self) -> dia_matrix[np.floating]:
         """Get the update matrix acting on u^(n - 1)."""
         return self._c
 
@@ -188,7 +199,9 @@ class LinearResonator1D(Resonator):
 
         return 1 / n, n
 
-    def __build_update_matrices(self, h: float, n: int) -> tuple[spmatrix, spmatrix]:
+    def __build_update_matrices(
+        self, h: float, n: int
+    ) -> tuple[dia_matrix[np.floating], ...]:
         k = self._time_step
         gamma = self._gamma
         kappa = self._kappa
@@ -209,16 +222,16 @@ class LinearResonator1D(Resonator):
 
         i, dxx, dxxxx = self.__apply_boundary_conditions((i, dxx, dxxxx), 2 * beta)
 
-        b = self.__create_b_matrix((i, dxx, dxxxx), (lambda2, zeta, mu2)) / den
+        b = self.__create_b_matrix((i, dxx, dxxxx), (lambda2, zeta, mu2)) / (1.0 / den)
         c = self.__create_c_matrix((i, dxx), (b1, k, zeta, 2 * alpha, mu2), n) / -den
 
         return b, c
 
     def __create_b_matrix(
         self,
-        matrices: tuple[spmatrix, spmatrix, spmatrix],
+        matrices: tuple[dia_matrix[np.floating], ...],
         coefficients: tuple[float, float, float],
-    ) -> spmatrix:
+    ) -> dia_matrix[np.floating]:
         i, dxx, dxxxx = matrices
         lambda2, zeta, mu2 = coefficients
 
@@ -226,22 +239,26 @@ class LinearResonator1D(Resonator):
 
     def __create_c_matrix(
         self,
-        matrices: tuple[spmatrix, spmatrix],
+        matrices: tuple[dia_matrix[np.floating], ...],
         coefficients: tuple[float, ...],
         n: int,
-    ) -> spmatrix:
+    ) -> dia_matrix[np.floating]:
         conditions = self._boundary_conditions
         i, dxx = matrices
         b1, k, zeta, alpha2, mu2 = coefficients
 
         c = (1.0 - b1 * k) * i + zeta * dxx
 
-        if any(c == BoundaryCondition.FREE for c in conditions.values()):
+        if any(
+            condition == BoundaryCondition.FREE for condition in conditions.values()
+        ):
             c = self.__add_free_matrix(c, n, (alpha2, mu2))
 
         return c
 
-    def __add_free_matrix(self, c: spmatrix, n: int, coefficients: tuple[float, float]):
+    def __add_free_matrix(
+        self, c: dia_matrix[np.floating], n: int, coefficients: tuple[float, float]
+    ) -> dia_matrix[np.floating]:
         conditions = self._boundary_conditions
         alpha2, mu2 = coefficients
 
@@ -258,10 +275,8 @@ class LinearResonator1D(Resonator):
         return c + mu2 * m.todia()
 
     def __apply_boundary_conditions(
-        self,
-        matrices: tuple[spmatrix, spmatrix, spmatrix],
-        beta2: float,
-    ) -> tuple[spmatrix, ...]:
+        self, matrices: tuple[dia_matrix[np.floating], ...], beta2: float
+    ) -> tuple[dia_matrix[np.floating], ...]:
         conditions = self._boundary_conditions
 
         i, dxx, dxxxx = [m.todok() for m in matrices]
@@ -279,7 +294,7 @@ class LinearResonator1D(Resonator):
         return tuple(m.todia() for m in (i, dxx, dxxxx))
 
     def __apply_clamped_condition(
-        self, matrices: tuple[spmatrix, spmatrix, spmatrix], endpoint: Endpoint
+        self, matrices: tuple[dok_matrix[np.floating], ...], endpoint: Endpoint
     ) -> None:
         i, dxx, dxxxx = matrices
 
@@ -307,7 +322,7 @@ class LinearResonator1D(Resonator):
 
     def __apply_simply_supported_condition(
         self,
-        matrices: tuple[spmatrix, spmatrix, spmatrix],
+        matrices: tuple[dok_matrix[np.floating], ...],
         endpoint: Endpoint,
     ) -> None:
         self.__apply_clamped_condition(matrices, endpoint)
@@ -322,7 +337,7 @@ class LinearResonator1D(Resonator):
 
     def __apply_free_condition(
         self,
-        matrices: tuple[spmatrix, spmatrix, spmatrix],
+        matrices: tuple[dok_matrix[np.floating], ...],
         endpoint: Endpoint,
         beta2: float,
     ) -> None:
