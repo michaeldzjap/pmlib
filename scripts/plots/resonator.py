@@ -52,7 +52,10 @@ resonator = LinearResonator1D(
     GAMMA,
     kappa,
     sig,
-    {Endpoint.LEFT: BoundaryCondition.CLAMPED, Endpoint.RIGHT: BoundaryCondition.CLAMPED},
+    {
+        Endpoint.LEFT: BoundaryCondition.CLAMPED,
+        Endpoint.RIGHT: BoundaryCondition.CLAMPED,
+    },
 )
 
 resonator.build()
