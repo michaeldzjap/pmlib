@@ -1,6 +1,7 @@
 """Modal resonator definitions."""
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from math import ceil, floor
 
 import numpy as np
@@ -28,12 +29,41 @@ class ModalResonator(Resonator, ABC):
         super().__init__(gamma, kappa, sigma0, sigma1, M)
 
         self.max_modes = max_modes
+        self.Mm1 = 1.0 / np.sqrt(M)
 
         self.omega, self.beta2, self.mu, self.damping_coefficients, self.num_modes = (
             self._compute_modes()
         )
 
         self._check_modes()
+
+    def evaluate_chi(self, coords: Sequence[float]) -> npt.NDArray[np.float64]:
+        """Evaluate the mass-normalised eigenfunction chi at spatially scaled coordinates.
+
+        Evaluates the function at coordinates within :math:`[0, 1]^{\text{\alpha}}`.
+
+        Parameters
+        ----------
+        coords : array_like
+            The spatially scaled coordinates in :math:`[0, 1]^{\text{\alpha}}`.
+
+        Returns
+        -------
+        ndarray
+            The eigenfunction chi evaluated at the given coordinates.
+        """
+        if len(coords) != self.DIMENSION:
+            raise ValueError(f"Expected {self.DIMENSION}D coordinates, received {len(coords)}D instead.")
+
+        # Eq. (9)
+        chi = np.full(
+            self.num_modes, self.Mm1 * (2.0 ** (0.5 * self.DIMENSION)), dtype=np.float64
+        )
+
+        for k, x in enumerate(coords):
+            chi *= np.sin(self.mu[:, k] * np.pi * x)
+
+        return chi
 
     @abstractmethod
     def _compute_modes(
@@ -55,10 +85,6 @@ class ModalResonator(Resonator, ABC):
     ) -> npt.NDArray[np.float64]:
         return 2.0 * (self.sigma0 + self.sigma1 * beta2)
 
-    """
-    Sort modes in ascending order.
-    """
-
     def _sort_modes(
         self,
         omega: npt.NDArray[np.float64],
@@ -66,7 +92,7 @@ class ModalResonator(Resonator, ABC):
         mu: npt.NDArray[np.float64],
         damping_coefficients: npt.NDArray[np.float64],
     ) -> tuple[npt.NDArray[np.float64], ...]:
-        order = np.argsort(omega)
+        order = np.argsort(omega)  # Sort modes in ascending order
 
         omega = omega[order]
         beta2 = beta2[order]
